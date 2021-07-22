@@ -1,8 +1,12 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using webapi5.DTOs;
 using webapi5.Extensions;
@@ -39,6 +43,27 @@ namespace webapi5.Controllers
             if (_user == null)
                 return NotFound();
             else return Ok(_user.toDTO());
+        }
+
+        [HttpPost("login")]
+        public async Task<ActionResult<string>> Login([FromBody] LoginDTO credentials)
+        {
+            var _user = await _unit.Users.Get(user => user.Parola == credentials.Parola && user.Email == credentials.Email);
+            if (_user == null) return Unauthorized();
+
+            var _secretkey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("uuewJNAqweZXCSAsadqwe213"));
+            var _signinCredentials = new SigningCredentials(_secretkey, SecurityAlgorithms.HmacSha256);
+
+            var _tokenOptions = new JwtSecurityToken(
+                issuer: "https://localhost:44375",
+                audience: "https://localhost:44375",
+                claims: new List<Claim>(),
+                expires: DateTime.Now.AddHours(8),
+                signingCredentials: _signinCredentials
+            );
+
+            var _tokeString = new JwtSecurityTokenHandler().WriteToken(_tokenOptions);
+            return Ok(new { Token = _tokeString });
         }
 
         [HttpPost]
